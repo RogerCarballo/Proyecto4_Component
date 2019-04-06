@@ -1,11 +1,9 @@
 package model;
 
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.util.Calendar;
 
-public class RegistroDB implements PropertyChangeListener {
-	private String usuario, tipoConsulta, consulta;
+public class RegistroDB {
+	private String usuario, tipoConsulta, consulta, bd;
 	private int numRegistros;
 	private Calendar fechaHora;
 
@@ -20,12 +18,12 @@ public class RegistroDB implements PropertyChangeListener {
 	 * @param numRegistros
 	 * @param fechaHora
 	 */
-	public RegistroDB(String usuario, String tipoConsulta, int numRegistros, Calendar fechaHora) {
-		super();
+	public RegistroDB(String usuario, String tipoConsulta, int numRegistros, Calendar fechaHora, String bd) {
 		this.usuario = usuario;
 		this.tipoConsulta = tipoConsulta;
 		this.numRegistros = numRegistros;
 		this.fechaHora = fechaHora;
+		this.bd = bd;
 	}
 
 	/**
@@ -103,24 +101,24 @@ public class RegistroDB implements PropertyChangeListener {
 		this.fechaHora = fechaHora;
 	}
 
-	@Override
-	public void propertyChange(PropertyChangeEvent evt) {
-		// TODO Auto-generated method stub
-
+	public String getBd() {
+		return bd;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#toString()
-	 */
+	public void setBd(String bd) {
+		this.bd = bd;
+	}
+
 	@Override
 	public String toString() {
 		return "RegistroDB [usuario=" + usuario + ", tipoConsulta=" + tipoConsulta + ", consulta=" + consulta
-				+ ", numRegistros=" + numRegistros + ", fechaHora=" + fechaHora.get(Calendar.HOUR_OF_DAY) + ":"
-                + fechaHora.get(Calendar.MINUTE) + ":" + fechaHora.get(Calendar.SECOND) + " "
-                + fechaHora.get(Calendar.DAY_OF_MONTH) + "/" + fechaHora.get(Calendar.MONTH) + "/"
-                + fechaHora.get(Calendar.YEAR);
+				+ ", numRegistros=" + numRegistros + ", fechaHora=" + getFecha();
+	}
+
+	public String getFecha() {
+		return fechaHora.get(Calendar.DAY_OF_MONTH) + "/" + fechaHora.get(Calendar.MONTH) + "/"
+				+ fechaHora.get(Calendar.YEAR) + " " + fechaHora.get(Calendar.HOUR_OF_DAY) + ":"
+				+ fechaHora.get(Calendar.MINUTE) + ":" + fechaHora.get(Calendar.SECOND);
 	}
 
 }

@@ -1,17 +1,26 @@
 package beans;
 
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 
+import event.Evento;
 import model.RegistroDB;
 
 public class GestorBDBean implements Serializable {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -1187624062513779766L;
 	private String ip;
 	private String usuario;
 	private String database;
@@ -19,49 +28,41 @@ public class GestorBDBean implements Serializable {
 	private Connection connection;
 	private Statement statement;
 	private ResultSet resultset;
-	private RegistroDB registro = new RegistroDB();
+	private Evento evento;
+	private PropertyChangeSupport changeSupp;
 
 	/**
 	 * Constructor de la clase GestorBDBean
 	 */
 	public GestorBDBean() {
-
-	}
-
-	/**
-	 * Constructor de la clase GestorBDBean
-	 * 
-	 * @param ip
-	 * @param database
-	 * @param usuario
-	 * @param password
-	 */
-	public GestorBDBean(String ip, String database, String usuario, String password) {
-		this.ip = ip;
-		this.usuario = usuario;
-		this.database = database;
-		this.password = password;
+		evento = new Evento();
+		changeSupp = new PropertyChangeSupport(this);
+		addPropertyChangeListener(evento);
 	}
 
 	/**
 	 * Metodo conexion que permite conectarnos a la base de datos que hayamos
 	 * indicado en el constructor.
 	 */
-	private void conexion() {
+	public void conexion(String ip, String database, String usuario, String password) {
+		this.ip = ip;
+		this.usuario = usuario;
+		this.database = database;
+		this.password = password;
 		try {
-			registro.setUsuario(usuario);
 			connection = DriverManager.getConnection("jdbc:mysql://" + ip + "/" + database, usuario, password);
-
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 	}
 
 	public void select(String consulta) {
+		RegistroDB registro = new RegistroDB();
 		try {
+			registro.setUsuario(this.usuario);
 			registro.setTipoConsulta("SELECT");
 			registro.setConsulta(consulta);
-
+			registro.setBd(this.database);
 			statement = connection.createStatement();
 			resultset = statement.executeQuery(consulta);
 			int count = 0;
@@ -70,8 +71,7 @@ public class GestorBDBean implements Serializable {
 			}
 			registro.setNumRegistros(count);
 			registro.setFechaHora(Calendar.getInstance());
-
-			System.out.println(registro.toString());
+			changeSupp.firePropertyChange("SELECT", null, registro);
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -79,52 +79,52 @@ public class GestorBDBean implements Serializable {
 	}
 
 	public void delete(String consulta) {
+		RegistroDB registro = new RegistroDB();
 		try {
 			statement = connection.createStatement();
-
 			int registros = statement.executeUpdate(consulta);
-
 			registro.setUsuario(this.usuario);
-			registro.setTipoConsulta("DELETE");
+			registro.setBd(this.database);
+			registro.setTipoConsulta("delete");
 			registro.setConsulta(consulta);
 			registro.setNumRegistros(registros);
 			registro.setFechaHora(Calendar.getInstance());
-			System.out.println(registro.toString());
+			changeSupp.firePropertyChange("DELETE", null, registro);
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 	}
 
 	public void update(String consulta) {
+		RegistroDB registro = new RegistroDB();
 		try {
 			statement = connection.createStatement();
-
 			int registros = statement.executeUpdate(consulta);
-
+			registro.setBd(this.database);
 			registro.setUsuario(this.usuario);
-			registro.setTipoConsulta("UPDATE");
+			registro.setTipoConsulta("update");
 			registro.setConsulta(consulta);
 			registro.setNumRegistros(registros);
 			registro.setFechaHora(Calendar.getInstance());
+			changeSupp.firePropertyChange("update", null, registro);
 
-			System.out.println(registro.toString());
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 	}
 
 	public void insert(String consulta) {
+		RegistroDB registro = new RegistroDB();
 		try {
 			statement = connection.createStatement();
-			statement.executeUpdate(consulta);
-
+			int numRegistros = statement.executeUpdate(consulta);
+			registro.setBd(this.database);
 			registro.setUsuario(this.usuario);
-			registro.setTipoConsulta("INSERT");
+			registro.setTipoConsulta("insert");
 			registro.setConsulta(consulta);
-			registro.setNumRegistros(1);
+			registro.setNumRegistros(numRegistros);
 			registro.setFechaHora(Calendar.getInstance());
-
-			System.out.println(registro.toString());
+			changeSupp.firePropertyChange("INSERT", null, registro);
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -190,9 +190,65 @@ public class GestorBDBean implements Serializable {
 		this.password = password;
 	}
 
-	public static void main(String[] args) {
-		GestorBDBean db = new GestorBDBean("localhost:3306", "bbdd_jbdc", "root", "");
-		db.conexion();
-		db.select("SELECT * FROM CLIENTES");
+	public void addPropertyChangeListener(PropertyChangeListener listener) {
+		changeSupp.addPropertyChangeListener(listener);
 	}
+
+	public void removePropertyChangeListener(PropertyChangeListener listener) {
+		changeSupp.removePropertyChangeListener(listener);
+	}
+
+	public List<RegistroDB> consultar(String db, String usuario, String tipoConsulta) {
+		List<RegistroDB> consulta = new ArrayList<RegistroDB>();
+		for (RegistroDB registro : evento.getRegistros()) {
+			if (registro.getBd().equalsIgnoreCase(db) && registro.getUsuario().equalsIgnoreCase(usuario)
+					&& registro.getTipoConsulta().equalsIgnoreCase(tipoConsulta)) {
+				System.out
+				.println(registro.getConsulta() + " " + registro.getFecha());
+				consulta.add(registro);
+			}
+
+		}
+		return consulta;
+
+	}
+
+	public List<RegistroDB> consultar(String db, String tipoDato) {
+		List<RegistroDB> consulta = new ArrayList<RegistroDB>();
+		switch (tipoDato.toLowerCase()) {
+		case "select":
+		case "delete":
+		case "update":
+		case "insert":
+			for (RegistroDB registro : evento.getRegistros()) {
+				if (registro.getBd().equalsIgnoreCase(db) && registro.getTipoConsulta().equalsIgnoreCase(tipoDato)) {
+					consulta.add(registro);
+					System.out
+							.println(registro.getConsulta() + " " + registro.getFecha() + " " + registro.getUsuario());
+				}
+			}
+			break;
+		default:
+			for (RegistroDB registro : evento.getRegistros()) {
+				if (registro.getBd().equalsIgnoreCase(db) && registro.getUsuario().equalsIgnoreCase(tipoDato)) {
+					System.out.println(
+							registro.getConsulta() + " " + registro.getFecha() + " " + registro.getTipoConsulta());
+					consulta.add(registro);
+				}
+			}
+			break;
+		}
+		return consulta;
+	}
+
+	public static void main(String[] args) {
+		
+		System.out.println("***********LOG DE REGISTROS****************\n");
+		GestorBDBean g = new GestorBDBean();
+		g.conexion("localhost", "bbdd_jbdc", "root", "");
+		g.select("select * from clientes");
+		g.select("select * from productos");
+		g.consultar("BBDD_JBDC", "root","select");
+	}
+
 }
