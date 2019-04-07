@@ -52,7 +52,7 @@ public class GestorBDBean implements Serializable {
 		try {
 			connection = DriverManager.getConnection("jdbc:mysql://" + ip + "/" + database, usuario, password);
 		} catch (SQLException e) {
-			e.printStackTrace();
+			System.err.println("Error en la conexion");
 		}
 	}
 
@@ -130,6 +130,26 @@ public class GestorBDBean implements Serializable {
 		}
 	}
 
+	public void procedure(String consulta) {
+		RegistroDB registro = new RegistroDB();
+
+		Statement st;
+		try {
+			st = (Statement) connection.createStatement();
+			st.execute(consulta);
+			registro.setBd(this.database);
+			registro.setUsuario(this.usuario);
+			registro.setTipoConsulta("procedure");
+			registro.setConsulta(consulta);
+			registro.setFechaHora(Calendar.getInstance());
+			changeSupp.firePropertyChange("INSERT", null, registro);
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			System.err.println("Error en el procedure");
+		}
+
+	}
+
 	/**
 	 * @return the ip
 	 */
@@ -203,8 +223,7 @@ public class GestorBDBean implements Serializable {
 		for (RegistroDB registro : evento.getRegistros()) {
 			if (registro.getBd().equalsIgnoreCase(db) && registro.getUsuario().equalsIgnoreCase(usuario)
 					&& registro.getTipoConsulta().equalsIgnoreCase(tipoConsulta)) {
-				System.out
-				.println(registro.getConsulta() + " " + registro.getFecha());
+				System.out.println(registro.getConsulta() + " " + registro.getFecha());
 				consulta.add(registro);
 			}
 
@@ -220,6 +239,7 @@ public class GestorBDBean implements Serializable {
 		case "delete":
 		case "update":
 		case "insert":
+		case "procedure":
 			for (RegistroDB registro : evento.getRegistros()) {
 				if (registro.getBd().equalsIgnoreCase(db) && registro.getTipoConsulta().equalsIgnoreCase(tipoDato)) {
 					consulta.add(registro);
@@ -240,15 +260,4 @@ public class GestorBDBean implements Serializable {
 		}
 		return consulta;
 	}
-
-	public static void main(String[] args) {
-		
-		System.out.println("***********LOG DE REGISTROS****************\n");
-		GestorBDBean g = new GestorBDBean();
-		g.conexion("localhost", "bbdd_jbdc", "root", "");
-		g.select("select * from clientes");
-		g.select("select * from productos");
-		g.consultar("BBDD_JBDC", "root","select");
-	}
-
 }
